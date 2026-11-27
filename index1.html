@@ -1,0 +1,1084 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Claude Chat</title>
+<script>try{var _t=localStorage.getItem('theme');if(_t)document.documentElement.dataset.theme=_t}catch(e){}</script>
+<style>
+  :root{color-scheme:light;--bg:#faf9f5;--panel:#fff;--text:#1f1e1d;--muted:#73726c;--line:#e6e4dd;--accent:#c96442;--user:#efece3;--code:#f1efe8}
+  @media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;--bg:#262624;--panel:#30302e;--text:#f0eee6;--muted:#9c9a92;--line:#454541;--accent:#d97757;--user:#3a3a37;--code:#1f1e1d}}
+  :root[data-theme=dark]{color-scheme:dark;--bg:#262624;--panel:#30302e;--text:#f0eee6;--muted:#9c9a92;--line:#454541;--accent:#d97757;--user:#3a3a37;--code:#1f1e1d}
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  @supports(height:100dvh){html,body{height:100dvh}}
+  body{overscroll-behavior:none;-webkit-text-size-adjust:100%}
+  body{background:var(--bg);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column}
+  header{display:flex;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel);padding-top:max(10px,env(safe-area-inset-top))}
+  header h1{font-size:16px;margin:0;flex:1;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  select,button,input,textarea{font:inherit;color:var(--text)}
+  select,.btn{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+  .btn{cursor:pointer}
+  #msgs{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:14px}
+  .m{max-width:760px;width:100%;margin:0 auto;white-space:pre-wrap;word-wrap:break-word}
+  .m.user{background:var(--user);padding:10px 14px;border-radius:14px;width:fit-content;max-width:min(760px,88%);margin-right:auto;margin-left:auto;align-self:center}
+  .row{width:100%;max-width:760px;margin:0 auto;display:flex}
+  .row.user{justify-content:flex-end}
+  .row.user .m{margin:0;background:var(--user);padding:10px 14px;border-radius:14px;max-width:88%;width:auto}
+  .row.assistant .m{margin:0}
+  pre{background:var(--code);padding:12px;border-radius:10px;overflow-x:auto;white-space:pre;font-size:14px;margin:8px 0}
+  code{background:var(--code);padding:1px 5px;border-radius:5px;font-size:.92em}
+  pre code{background:none;padding:0}
+  .err{color:#c0392b}
+  .empty{margin:auto;text-align:center;color:var(--muted)}
+  form{display:flex;gap:8px;padding:10px 14px;padding-bottom:max(10px,env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--panel)}
+  .wrap{display:flex;gap:8px;max-width:760px;width:100%;margin:0 auto}
+  textarea{flex:1;resize:none;max-height:160px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;outline:none}
+  textarea:focus,input:focus{border-color:var(--accent)}
+  #send{background:var(--accent);color:#fff;border:0;border-radius:12px;padding:0 18px;cursor:pointer;font-weight:600}
+  #send:disabled{opacity:.5}
+  dialog{border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--text);width:min(440px,92vw);padding:18px}
+  dialog::backdrop{background:rgba(0,0,0,.45)}
+  dialog label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+  dialog input,dialog textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+  small{color:var(--muted)}
+  form{flex-direction:column;gap:6px}
+  #stats{max-width:760px;width:100%;margin:0 auto;font-size:12px;color:var(--muted);line-height:1.4}
+  .row.assistant{flex-direction:column}
+  .meta{font-size:12px;color:var(--muted);margin-top:4px}
+  #notice,#chips{max-width:760px;width:100%;margin:0 auto;font-size:12px}
+  #notice:empty,#chips:empty{display:none}
+  .chip{display:inline-block;background:var(--user);border-radius:999px;padding:3px 10px;margin:0 6px 6px 0}
+  .chip b{cursor:pointer;margin-left:4px}
+  .fchips{font-size:12px;color:var(--muted);margin-top:6px}
+  .acts{margin-top:4px;display:flex;gap:6px;align-items:center}
+  .acts select,.acts .btn,.cbh button{font-size:12px;padding:2px 8px;background:var(--bg);border:1px solid var(--line);border-radius:6px;cursor:pointer}
+  .cb{margin:8px 0}
+  .cbh{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);background:var(--code);border-radius:10px 10px 0 0;padding:4px 10px;border-bottom:1px solid var(--line)}
+  .cbh button{margin-left:6px;color:var(--text)}
+  .cb pre{margin:0;border-radius:0 0 10px 10px}
+  #stats{display:flex;align-items:center;gap:10px}
+  #stats .rb{stroke:var(--accent)} #stats .rn{stroke:var(--muted)} #stats.hot .rb{stroke:#c0392b}
+  #stats svg text{fill:var(--text)}
+  #side{position:fixed;top:0;bottom:0;left:0;width:min(300px,86vw);background:var(--panel);border-right:1px solid var(--line);transform:translateX(-100%);transition:transform .2s;z-index:20;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
+  #side.open{transform:none}
+  #scrim{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:19;display:none}
+  #scrim.open{display:block}
+  #side .top{display:flex;gap:8px;align-items:center;padding:12px;border-bottom:1px solid var(--line)}
+  #side .top strong{flex:1}
+  #chatList{overflow-y:auto;flex:1;padding:6px}
+  .ci{display:flex;align-items:center;gap:2px;padding:8px 10px;border-radius:8px;cursor:pointer}
+  .ci:hover{background:var(--bg)} .ci.on{background:var(--user)}
+  .ci .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ci button{border:0;background:none;cursor:pointer;opacity:.6;padding:2px 4px}
+  .ci button:hover{opacity:1}
+  .none{padding:12px;color:var(--muted);font-size:13px}
+  #login{position:fixed;inset:0;z-index:50;background:var(--bg);display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
+  .lbox{width:min(380px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:10px}
+  .lbox h2{margin:0 0 4px;font-size:20px}
+  .lbox input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;outline:none}
+  .lbox #loginBtn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:11px;font-weight:600;cursor:pointer}
+  .lbox #loginBtn:disabled{opacity:.5}
+  #loginMsg{font-size:13px;color:#c0392b;min-height:18px}
+  #loginTheme{position:fixed;top:max(12px,env(safe-area-inset-top));right:14px}
+  .themeBtn{min-width:38px}
+  @media (max-width:600px){
+    header{gap:6px;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top))}
+    header h1{display:none}
+    #model{flex:1;width:auto!important;max-width:none!important;min-width:0}
+    #msgs{padding:12px 10px;gap:12px}
+    .row.user .m{max-width:94%}
+    form{padding:8px 10px;padding-bottom:max(8px,env(safe-area-inset-bottom))}
+    #stats{font-size:11px}
+    pre{font-size:13px}
+    dialog{width:94vw;padding:14px}
+    .lbox{padding:20px}
+  }
+  dialog{max-height:90vh;overflow:auto}
+  dialog details{margin-top:10px}
+  #syncState{padding:8px 12px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);cursor:pointer;word-break:break-all}
+  #acctStatus{font-size:13px;margin-bottom:6px}
+  #acctMsg{display:block;margin-top:6px}
+  #cmp{width:min(560px,94vw)}
+  #cmpTable{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+  #cmpTable th,#cmpTable td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+  #cmpTable td:nth-child(n+2),#cmpTable th:nth-child(n+2){text-align:right}
+</style>
+</head>
+<body>
+<header>
+  <button class="btn" id="menuBtn" title="Chats">☰</button>
+  <h1>Claude Chat</h1>
+  <select id="model" class="btn" style="width:170px;max-width:40vw"></select>
+  <button class="btn" id="newChat" title="New chat">New</button>
+  <button class="btn" id="cmpBtn" title="Compare token counts across models" type="button">Σ</button>
+  <button class="btn themeBtn" id="themeBtn" title="Light / dark" type="button">☾</button>
+  <button class="btn" id="settingsBtn" title="Settings">⚙︎</button>
+</header>
+
+<div id="login">
+  <button class="btn themeBtn" id="loginTheme" title="Light / dark" type="button">☾</button>
+  <div class="lbox">
+    <h2>Claude Chat</h2>
+    <small>Sign in to continue.</small>
+    <input id="loginEmail" type="email" placeholder="Email" autocomplete="username" autocapitalize="off" spellcheck="false">
+    <input id="loginPass" type="password" placeholder="Password" autocomplete="current-password">
+    <button id="loginBtn" type="button">Sign in</button>
+    <div id="loginMsg"></div>
+  </div>
+</div>
+
+<div id="scrim"></div>
+<aside id="side"><div class="top"><strong>Chats</strong><button class="btn" id="sideNew" type="button">+ New chat</button></div><div id="syncState"></div><div id="chatList"></div></aside>
+
+<div id="msgs"><div class="empty" id="empty">Start a conversation.</div></div>
+
+<form id="form">
+  <div id="stats"></div>
+  <div id="notice"></div>
+  <div id="chips"></div>
+  <input type="file" id="file" multiple hidden>
+  <div class="wrap">
+    <button type="button" class="btn" id="attach" title="Attach files">📎</button>
+    <textarea id="input" rows="1" placeholder="Message Claude…"></textarea>
+    <button id="send" type="submit">Send</button>
+  </div>
+</form>
+
+<dialog id="cmp">
+  <strong>Compare tokens across models</strong>
+  <label for="cmpText">Text to count</label>
+  <textarea id="cmpText" rows="4">hello world</textarea>
+  <div class="actions" style="justify-content:flex-start;margin-top:8px">
+    <button class="btn" id="cmpRun" type="button">Run on all models</button>
+    <button class="btn" id="cmpClose" type="button">Close</button>
+  </div>
+  <small id="cmpMsg" style="display:block;margin-top:6px"></small>
+  <div style="overflow-x:auto"><table id="cmpTable"><thead><tr><th>Model</th><th>Tokens</th><th>vs min</th><th>$ / 1M msgs</th></tr></thead><tbody></tbody></table></div>
+</dialog>
+
+<dialog id="settings">
+  <strong>Settings</strong>
+  <label for="key">Anthropic API key</label>
+  <input id="key" type="password" placeholder="sk-ant-…" autocomplete="off">
+  <small>Saved in your account and synced to all your devices. Sent only to the base URL below.</small>
+  <label for="baseUrl">Base URL (your provider's endpoint)</label>
+  <input id="baseUrl" placeholder="https://cleanapis.com/v1" autocomplete="off">
+  <small>Requests go to &lt;base URL&gt;/chat/completions (OpenAI-compatible).</small>
+  <label for="system">System prompt (optional)</label>
+  <textarea id="system" rows="3" placeholder="You are a helpful assistant."></textarea>
+  <label for="maxTokens">Max output tokens</label>
+  <input id="maxTokens" type="number" min="256" max="64000" value="4096">
+  <label>Cloud sync (chats on all your devices)</label>
+  <div id="acctStatus"></div>
+  <div class="actions" style="justify-content:flex-start;margin-top:8px">
+    <button class="btn" id="signOutBtn" type="button">Sign out</button>
+  </div>
+  <div class="actions">
+    <button class="btn" id="clearKey" type="button">Remove key</button>
+    <button class="btn" id="closeSettings" type="button">Save</button>
+  </div>
+</dialog>
+
+<script>
+const $ = id => document.getElementById(id);
+// Only the sign-in session (and the Supabase URL/key) stay in this browser.
+// Chats and settings live in memory and in your cloud account.
+const LOCAL_KEYS = new Set(['sb_session','sb_owner','theme']);
+const CLOUD_KEYS = ['api_key','base_url','system_prompt','max_tokens','model'];
+const mem = new Map();
+let settingsLoaded = false, settingsTimer = null;
+const store = {
+  get(k, d=''){ if(LOCAL_KEYS.has(k)){ try{ return localStorage.getItem(k) ?? d }catch{ return d } } return mem.has(k) ? mem.get(k) : d },
+  set(k, v){ if(LOCAL_KEYS.has(k)){ try{ localStorage.setItem(k, v); return true }catch{ return false } } mem.set(k, v); if(CLOUD_KEYS.includes(k)) settingsDirty(); return true },
+  del(k){ if(LOCAL_KEYS.has(k)){ try{ localStorage.removeItem(k) }catch{} } else { mem.delete(k); if(CLOUD_KEYS.includes(k)) settingsDirty() } }
+};
+const isLegacyKey = k => k==='chat_history' || k==='chat_index' || k==='current_chat' || k.startsWith('chat:') || CLOUD_KEYS.includes(k);
+(function legacyImport(){ // data saved by older versions of this page: upload it once, then delete it
+  try{ for(let i=0;i<localStorage.length;i++){ const k = localStorage.key(i); if(isLegacyKey(k)) mem.set(k, localStorage.getItem(k)) } }catch{}
+})();
+function legacyCleanup(){
+  try{ const del = []; for(let i=0;i<localStorage.length;i++){ const k = localStorage.key(i); if(isLegacyKey(k)) del.push(k) } del.forEach(k=>localStorage.removeItem(k)) }catch{}
+}
+const newId = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+let history = [], chats = [], curId = '';
+try{ chats = JSON.parse(store.get('chat_index','[]')) }catch{}
+try{ // move the old single chat into the new list
+  const old = JSON.parse(store.get('chat_history','[]'));
+  if(!chats.length && old.length){
+    const id = newId(); chats.push({id, title:'Previous chat', updated:Date.now(), auto:true});
+    store.set('chat:'+id, JSON.stringify(old)); store.set('chat_index', JSON.stringify(chats)); store.set('current_chat', id);
+  }
+}catch{}
+curId = store.get('current_chat','');
+if(!chats.some(c=>c.id===curId)) curId = '';
+try{ if(curId) history = JSON.parse(store.get('chat:'+curId,'[]')) }catch{}
+let busy = false, controller = null;
+
+$('key').value = store.get('api_key');
+$('system').value = store.get('system_prompt');
+$('maxTokens').value = store.get('max_tokens','4096');
+$('model').value = store.get('model','claude-opus-4.8');
+$('baseUrl').value = store.get('base_url','https://cleanapis.com/v1');
+const getBase = () => (store.get('base_url','https://cleanapis.com/v1') || 'https://cleanapis.com/v1').trim().replace(/\/+$/,'');
+$('model').onchange = e => { store.set('model', e.target.value.trim()); updateStats() };
+
+// [input $/1M, output $/1M, context tokens] from the Models page
+const PRICES={
+ 'gemma-2-2b':[.12,.23,8e3],'deepseek-v4-flash-0731':[.12,.12,1048576],'gpt-5.6-luna':[.36,.36,1.05e6],
+ 'deepseek-v4-pro-0813':[.55,.55,1048576],'qwen3.8-27b':[.57,.57,262e3],'seed-2.1-turbo':[.92,.92,262e3],
+ 'seed-2.1-pro':[1.15,1.15,262e3],'kimi-k2.6':[1.22,1.22,1e6],'gemini-3.7-flash':[1.24,1.24,1048576],
+ 'glm-5.3':[1.36,1.36,1e6],'glm-5.2':[1.36,1.36,1e6],'qwen3.8-max':[1.76,1.76,1e6],'qwen3.7-max':[1.76,1.76,1e6],
+ 'muse-spark-1.1':[1.82,1.82,1e6],'deepseek-v4-pro-max':[2.05,2.05,1048576],'gemini-3.6-flash':[2.5,2.5,1048576],
+ 'grok-4.5':[2.81,2.81,5e5],'grok-4.6':[2.81,2.81,5e5],'claude-sonnet-5':[3.32,3.32,1e6],
+ 'gpt-5.6-terra':[3.58,3.58,1.05e6],'gemini-3.1-pro':[4.47,4.47,1048576],'kimi-k3':[4.98,4.98,1e6],
+ 'claude-opus-5':[8.3,8.3,1e6],'claude-mythos-preview':[8.3,8.3,1e6],'claude-opus-4.8':[8.3,8.3,1e6],
+ 'claude-opus-4.6':[8.3,8.3,1e6],'claude-opus-4.7':[8.3,8.3,1e6],'claude-opus-5.5':[8.3,8.3,1e6],
+ 'gpt-5.6-sol':[8.95,8.95,1.05e6],'gpt-5.5':[8.95,8.95,1.05e6],'gpt-5.5-pro':[8.95,8.95,1.05e6],
+ 'claude-fable-5':[16.61,16.61,1e6],'claude-fable-5.1':[16.61,16.61,1e6]
+};
+const MIL=1e6;
+function estTok(t){ let a=0,n=0; for(const ch of t||''){ ch.charCodeAt(0)<128 ? a++ : n++ } return Math.ceil(a/4 + n/1.5) }
+const fmt = n => n>=1000 ? (n/1000).toFixed(1)+'K' : String(n);
+const money = x => x<0.01 ? '$'+x.toFixed(4) : '$'+x.toFixed(3);
+function updateStats(){
+  const p = PRICES[$('model').value.trim()], ctx = p ? p[2] : 0;
+  // start from the real usage of the last reply (prompt + reply), then add what's new
+  let idx = -1;
+  for(let i=history.length-1;i>=0;i--){ const m = history[i].meta; if(history[i].role==='assistant' && m && m.exact){ idx = i; break } }
+  let base = 0;
+  if(idx>=0) base = history[idx].meta.tin + history[idx].meta.tout;
+  else { const sys = store.get('system_prompt'); base = (sys ? estTok(sys)+4 : 0)+estTok(FILE_HINT)+4 }
+  for(let i=idx+1;i<history.length;i++){ const h = history[i]; base += estTok(h.content)+4+(h.images?.length||0)*IMG_TOK }
+  let add = 0;
+  const draft = $('input').value; if(draft.trim()) add += estTok(draft)+4;
+  pending.forEach(f=>{ add += f.kind==='image' ? IMG_TOK : estTok(f.text)+20 });
+  const tin = base + add;
+  const maxOut = parseInt(store.get('max_tokens','4096'),10) || 4096;
+  let t = 'Next request: ~'+fmt(tin)+' tokens in'+(add ? ' (+'+fmt(add)+' new)' : '');
+  let ring = '', pc = 0;
+  if(p){
+    t += ' · ~'+money(tin*p[0]/MIL)+' input · reply up to '+money(maxOut*p[1]/MIL)+' (at max tokens)';
+    const C = 2*Math.PI*15, f1 = Math.min(1, base/ctx), f2 = Math.min(1-f1, add/ctx);
+    const arc = (f,off,cls)=> f>0 ? '<circle class="'+cls+'" cx="20" cy="20" r="15" fill="none" stroke-width="5" stroke-dasharray="'+Math.max(f*C,1.5)+' '+C+'" stroke-dashoffset="'+(-off*C)+'" transform="rotate(-90 20 20)"/>' : '';
+    pc = tin/ctx*100;
+    const ps = pc>=100 ? String(Math.round(pc)) : pc>=10 ? pc.toFixed(1) : pc>=1 ? pc.toFixed(2) : pc.toFixed(3);
+    const fs = Math.min(9, 24/((ps.length+1)*0.58));
+    t += ' · context used '+ps+'% ('+tin.toLocaleString('en-US')+' of '+ctx.toLocaleString('en-US')+')'+(tin>ctx ? ' · ⚠ over the context window' : '');
+    ring = '<svg width="58" height="58" viewBox="0 0 40 40" style="flex:none" role="img" aria-label="Context used"><circle cx="20" cy="20" r="15" fill="none" stroke="var(--line)" stroke-width="5"/>'+arc(f1,0,'rb')+arc(f2,f1,'rn')+'<text x="20" y="23.2" text-anchor="middle" font-size="'+fs.toFixed(1)+'">'+ps+'%</text></svg>';
+  } else t += ' · no price known for this model';
+  const total = history.reduce((a,h)=>a+(h.meta?.cost||0),0);
+  if(total) t += '<br>Chat total so far: '+money(total);
+  if(saveFail) t += '<br>⚠ Chat is too large to save in this browser; it will be lost on reload.';
+  $('stats').className = pc>90 ? 'hot' : '';
+  $('stats').innerHTML = ring + '<div>'+t+'</div>';
+}
+function setMeta(m, meta){
+  const row = m.parentNode; row.querySelector('.meta')?.remove();
+  const d = document.createElement('div'); d.className = 'meta';
+  d.textContent = (meta.exact?'':'~')+fmt(meta.tin)+' in · '+(meta.exact?'':'~')+fmt(meta.tout)+' out'
+    + (meta.cost!=null ? ' · '+(meta.exact?'':'~')+money(meta.cost) : '') + (meta.exact?'':' (estimated)');
+  row.appendChild(d);
+}
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+function render(text){
+  const parts = text.split(/```/);
+  return parts.map((p,i)=>{
+    if(i%2===1){
+      const info = ((p.match(/^[^\n]*/)||[''])[0]).trim(), ps = info.split(/\s+/), FN = /^[\w\-./]+\.\w{1,8}$/;
+      const lang = (ps[0]||'').replace(/[^\w+#.-]/g,'');
+      let name = ps.slice(1).map(x=>x.replace(/["']/g,'')).find(x=>FN.test(x));
+      if(!name && FN.test(lang)) name = lang;
+      if(!name){ const pv = (parts[i-1]||'').trimEnd().split('\n').pop().match(/^[#*\s`>-]*([\w\-./]+\.\w{1,8})[*:`\s]*$/); if(pv) name = pv[1] }
+      name = (name||'').replace(/[^\w\-./]/g,'');
+      const body = p.replace(/^[^\n]*\n/,'');
+      return '<div class="cb" data-lang="'+lang+'" data-name="'+name+'"><div class="cbh"><span>'+esc(name||lang||'code')+'</span><span><button type="button" data-act="copy">Copy</button><button type="button" data-act="dl">'+(name?'Download':'Save')+'</button></span></div><pre><code>'+esc(body.replace(/\n$/,''))+'</code></pre></div>' }
+    return esc(p).replace(/`([^`\n]+)`/g,'<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>');
+  }).join('');
+}
+function addRow(role, text, meta, files){
+  $('empty')?.remove();
+  const row = document.createElement('div'); row.className = 'row '+role;
+  const m = document.createElement('div'); m.className = 'm';
+  m.innerHTML = render(text); row.appendChild(m); $('msgs').appendChild(row);
+  if(files&&files.length){ const d = document.createElement('div'); d.className = 'fchips'; d.textContent = '📎 '+files.join(', '); m.appendChild(d) }
+  if(meta) setMeta(m, meta);
+  if(role==='assistant' && text && text!=='…') addActions(m, text);
+  $('msgs').scrollTop = $('msgs').scrollHeight;
+  return m;
+}
+function redraw(){
+  $('msgs').innerHTML = '';
+  if(!history.length){ $('msgs').innerHTML = '<div class="empty" id="empty">Start a conversation.</div>'; updateStats(); return }
+  history.forEach(h => addRow(h.role, h.shown ?? h.content, h.meta, h.files)); updateStats();
+}
+function save(){
+  if(!history.length) return;
+  if(!curId){ curId = newId(); chats.unshift({id:curId, title:'New chat', updated:Date.now(), auto:true}) }
+  const c = chats.find(x=>x.id===curId); c.updated = Date.now(); delete c.stale;
+  if(c.auto!==false){
+    const f = history.find(h=>h.role==='user');
+    const t = ((f && (f.shown || (f.files&&f.files[0]) || f.content)) || '').replace(/\s+/g,' ').trim().slice(0,40);
+    if(t) c.title = t;
+  }
+  const ok1 = store.set('chat:'+curId, JSON.stringify(history.map(h=>({...h, images:undefined}))));
+  const ok2 = store.set('chat_index', JSON.stringify(chats)); store.set('current_chat', curId);
+  saveFail = !(ok1 && ok2); renderChatList(); dirty.add(curId); cloudPush();
+}
+
+// ===== Files: attach (receive) + save as (send) =====
+let pending = [], noticeT = null, saveFail = false;
+const IMG_TOK = 1500;
+const NOVISION = new Set(['gemma-2-2b','deepseek-v4-flash-0731','deepseek-v4-pro-0813','deepseek-v4-pro-max','qwen3.8-27b']);
+const CDN = 'https://cdnjs.cloudflare.com/ajax/libs/';
+const LIBS = {
+  pdfjs:[CDN+'pdf.js/3.11.174/pdf.min.js', ()=>window.pdfjsLib],
+  mammoth:[CDN+'mammoth/1.6.0/mammoth.browser.min.js', ()=>window.mammoth],
+  xlsx:[CDN+'xlsx/0.18.5/xlsx.full.min.js', ()=>window.XLSX],
+  jszip:[CDN+'jszip/3.10.1/jszip.min.js', ()=>window.JSZip],
+  jspdf:[CDN+'jspdf/2.5.1/jspdf.umd.min.js', ()=>window.jspdf]
+};
+const libLoading = {};
+function need(k){
+  const [url, get] = LIBS[k];
+  if(get()) return Promise.resolve(get());
+  return libLoading[k] || (libLoading[k] = new Promise((res, rej)=>{
+    const s = document.createElement('script'); s.src = url;
+    s.onload = ()=>{
+      if(k==='pdfjs') window.pdfjsLib.GlobalWorkerOptions.workerSrc = CDN+'pdf.js/3.11.174/pdf.worker.min.js';
+      res(get());
+    };
+    s.onerror = ()=>{ delete libLoading[k]; rej(new Error('could not load the '+k+' library (internet needed)')) };
+    document.head.appendChild(s);
+  }));
+}
+function flash(msg){
+  $('notice').textContent = msg; $('notice').className = 'err';
+  clearTimeout(noticeT); noticeT = setTimeout(()=>{ $('notice').textContent = '' }, 9000);
+}
+const fmtSize = b => b>=1e6 ? (b/1e6).toFixed(1)+' MB' : Math.max(1,Math.round(b/1e3))+' KB';
+
+// ---------- receive ----------
+const TEXT_EXT = new Set(('txt md markdown csv tsv json jsonl html htm xml yml yaml toml ini cfg conf env log js mjs cjs ts tsx jsx py rb php java kt c h cpp hpp cs go rs swift sh bash zsh ps1 sql css scss less vue svelte r lua pl dart tex rst svg gitignore dockerfile makefile').split(' '));
+const IMG_EXT = new Set(['png','jpg','jpeg','webp','gif']);
+const SKIP_RE = /(^|\/)(node_modules|\.git|__MACOSX|dist|build|\.next|venv|__pycache__)(\/|$)|\.DS_Store$/;
+const extOf = n => { const m = /\.([^./\\]+)$/.exec(n.toLowerCase()); return m ? m[1] : n.toLowerCase() };
+
+async function extractBuffer(name, buf, depth=0){
+  const e = extOf(name);
+  if(e==='pdf'){
+    const pdfjs = await need('pdfjs');
+    const pdf = await pdfjs.getDocument({data:new Uint8Array(buf.slice(0))}).promise;
+    const out = [];
+    for(let i=1;i<=pdf.numPages;i++){
+      const c = await (await pdf.getPage(i)).getTextContent();
+      out.push('--- page '+i+' ---\n'+c.items.map(x=>x.str+(x.hasEOL?'\n':' ')).join('').trim());
+    }
+    const t = out.join('\n\n');
+    return {text:t, warn: t.replace(/--- page \d+ ---|\s/g,'').length<20 ? 'no text found (scanned PDF?)' : ''};
+  }
+  if(e==='docx'){
+    const m = await need('mammoth');
+    return {text:(await m.extractRawText({arrayBuffer:buf})).value};
+  }
+  if(e==='doc') throw new Error('old .doc is not supported, save it as .docx');
+  if(['xlsx','xls','xlsm','ods'].includes(e)){
+    const X = await need('xlsx'); const wb = X.read(buf,{type:'array'});
+    return {text: wb.SheetNames.map(n=>'## Sheet: '+n+'\n'+X.utils.sheet_to_csv(wb.Sheets[n])).join('\n\n')};
+  }
+  if(e==='zip' && depth===0){
+    const Z = await need('jszip'); const zip = await Z.loadAsync(buf);
+    const names = Object.keys(zip.files).filter(n=>!zip.files[n].dir).sort();
+    const parts = [], skipped = []; let total = 0;
+    for(const n of names){
+      const x = extOf(n);
+      if(SKIP_RE.test(n) || !(TEXT_EXT.has(x) || ['pdf','docx','xlsx','xls'].includes(x))){ skipped.push(n); continue }
+      if(total > 1.5e6){ skipped.push(n+' (size cap)'); continue }
+      try{
+        const r = await extractBuffer(n, await zip.files[n].async('arraybuffer'), 1);
+        total += r.text.length; parts.push('### '+n+'\n'+r.text);
+      }catch{ skipped.push(n) }
+    }
+    let text = parts.join('\n\n');
+    if(skipped.length) text += '\n\n(Skipped '+skipped.length+' files: '+skipped.slice(0,15).join(', ')+(skipped.length>15?', …':'')+')';
+    return {text, warn: skipped.length ? skipped.length+' skipped' : ''};
+  }
+  if(!TEXT_EXT.has(e) && new Uint8Array(buf.slice(0,4096)).includes(0)) throw new Error('unsupported file type');
+  return {text:new TextDecoder().decode(buf)};
+}
+function imgToDataUrl(f){
+  return new Promise((res, rej)=>{
+    const fr = new FileReader();
+    fr.onerror = ()=>rej(new Error('read failed'));
+    fr.onload = ()=>{
+      const url = fr.result, im = new Image();
+      im.onerror = ()=>rej(new Error('not a valid image'));
+      im.onload = ()=>{
+        const sc = Math.min(1, 2000/Math.max(im.width, im.height));
+        if(sc===1 && f.size<4e6) return res(url);
+        const c = document.createElement('canvas'); c.width = Math.round(im.width*sc); c.height = Math.round(im.height*sc);
+        c.getContext('2d').drawImage(im,0,0,c.width,c.height); res(c.toDataURL('image/jpeg',.88));
+      };
+      im.src = url;
+    };
+    fr.readAsDataURL(f);
+  });
+}
+async function attach(files){
+  for(const f of files){
+    try{
+      if(f.size > 25e6) throw new Error('file is over 25 MB');
+      const e = extOf(f.name);
+      if(IMG_EXT.has(e) || (f.type.startsWith('image/') && e!=='svg')){
+        if(NOVISION.has($('model').value.trim())) flash('This model has no image input. Pick a model marked Vision.');
+        pending.push({name:f.name, size:f.size, kind:'image', dataUrl: await imgToDataUrl(f)});
+      }else{
+        const r = await extractBuffer(f.name, await f.arrayBuffer());
+        pending.push({name:f.name, size:f.size, kind:'text', text:r.text, warn:r.warn});
+      }
+    }catch(err){ flash('Could not read '+f.name+': '+err.message) }
+  }
+  renderChips(); updateStats();
+}
+function renderChips(){
+  $('chips').innerHTML = pending.map((f,i)=>'<span class="chip">'+(f.kind==='image'?'🖼️ ':'📎 ')+esc(f.name)+' · '
+    +(f.kind==='image' ? fmtSize(f.size) : '~'+fmt(estTok(f.text))+' tok')+(f.warn?' ⚠ '+esc(f.warn):'')
+    +' <b data-i="'+i+'" title="Remove">×</b></span>').join('');
+}
+
+// ---------- markdown helpers ----------
+const inl = s => esc(s).replace(/`([^`\n]+)`/g,'<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>');
+const isSep = r => /^[\s|:\-]+$/.test(r) && r.includes('-');
+function parseTable(rows){
+  const t = rows.filter(r=>!isSep(r)).map(r=>r.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim()));
+  const w = Math.max(0,...t.map(r=>r.length));
+  return t.map(r=>{ while(r.length<w) r.push(''); return r });
+}
+function mdToHtml(md){
+  const out = [], L = md.split('\n'); let i = 0;
+  const bul = /^\s*[-*]\s+/, num = /^\s*\d+[.)]\s+/;
+  while(i<L.length){
+    const l = L[i]; let m;
+    if(/^```/.test(l)){ const c=[]; i++; while(i<L.length && !/^```/.test(L[i])) c.push(L[i++]); i++; out.push('<pre><code>'+esc(c.join('\n'))+'</code></pre>'); continue }
+    if(/^\s*\|/.test(l)){ const r=[]; while(i<L.length && /^\s*\|/.test(L[i])) r.push(L[i++]);
+      const t = parseTable(r);
+      out.push('<table>'+t.map((row,ri)=>'<tr>'+row.map(c=>'<'+(ri?'td':'th')+' dir="auto">'+inl(c)+'</'+(ri?'td':'th')+'>').join('')+'</tr>').join('')+'</table>'); continue }
+    if((m = l.match(/^(#{1,6})\s+(.*)/))){ out.push('<h'+m[1].length+' dir="auto">'+inl(m[2])+'</h'+m[1].length+'>'); i++; continue }
+    if(bul.test(l)){ const it=[]; while(i<L.length && bul.test(L[i])) it.push('<li>'+inl(L[i++].replace(bul,''))+'</li>'); out.push('<ul dir="auto">'+it.join('')+'</ul>'); continue }
+    if(num.test(l)){ const it=[]; while(i<L.length && num.test(L[i])) it.push('<li>'+inl(L[i++].replace(num,''))+'</li>'); out.push('<ol dir="auto">'+it.join('')+'</ol>'); continue }
+    if(!l.trim()){ i++; continue }
+    const p = [];
+    while(i<L.length && L[i].trim() && !/^(```|#{1,6}\s|\s*\|)/.test(L[i]) && !bul.test(L[i]) && !num.test(L[i])) p.push(L[i++]);
+    out.push('<p dir="auto">'+inl(p.join('\n')).replace(/\n/g,'<br>')+'</p>');
+  }
+  return out.join('\n');
+}
+const docHtml = (t,b) => '<!doctype html><html><head><meta charset="utf-8"><title>'+esc(t)+'</title><style>body{font:14px/1.6 -apple-system,Segoe UI,Roboto,sans-serif;max-width:800px;margin:2em auto;padding:0 1em;color:#111}pre{background:#f3f2ee;padding:12px;border-radius:8px;white-space:pre-wrap;word-break:break-word;font-size:12.5px}code{background:#f3f2ee;padding:1px 4px;border-radius:4px}pre code{background:none;padding:0}table{border-collapse:collapse;margin:1em 0}td,th{border:1px solid #bbb;padding:6px 10px}th{background:#f3f2ee}</style></head><body>'+b+'</body></html>';
+const LANG_EXT = {javascript:'js',js:'js',typescript:'ts',ts:'ts',tsx:'tsx',jsx:'jsx',python:'py',py:'py',html:'html',css:'css',json:'json',bash:'sh',sh:'sh',shell:'sh',sql:'sql',java:'java',c:'c',cpp:'cpp','c++':'cpp',csharp:'cs',cs:'cs',go:'go',rust:'rs',rs:'rs',ruby:'rb',rb:'rb',php:'php',csv:'csv',tsv:'tsv',md:'md',markdown:'md',xml:'xml',yaml:'yaml',yml:'yml',text:'txt',txt:'txt',kotlin:'kt',swift:'swift'};
+function codeBlocks(text){
+  const out = [], re = /```([^\n]*)\n([\s\S]*?)```/g; let m;
+  while((m = re.exec(text))){
+    const info = m[1].trim(), parts = info.split(/\s+/);
+    const lang = (parts[0]||'').replace(/[^\w+#.-]/g,'');
+    let name = (parts.slice(1).join(' ').match(/[\w\-./]+\.\w{1,8}/)||[])[0];
+    if(!name && lang.includes('.') && /^[\w\-./]+\.\w{1,8}$/.test(lang)) name = lang;
+    if(!name){
+      const prev = text.slice(0,m.index).trimEnd().split('\n').pop();
+      const pm = prev.match(/^[#*\s`>-]*([\w\-./]+\.\w{1,8})[*:`\s]*$/); if(pm) name = pm[1];
+    }
+    out.push({lang, name, code:m[2].replace(/\n$/,'')});
+  }
+  return out;
+}
+
+// ---------- send (save as) ----------
+function dl(blob, name){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+}
+function printHtml(title, body){
+  const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+  document.body.appendChild(f);
+  const d = f.contentWindow.document; d.open(); d.write(docHtml(title, body)); d.close();
+  f.contentWindow.onafterprint = ()=>f.remove(); setTimeout(()=>f.remove(), 120000);
+  setTimeout(()=>{ f.contentWindow.focus(); f.contentWindow.print() }, 300);
+}
+const plain = s => s.replace(/\*\*/g,'').replace(/`/g,'');
+async function toPdf(text, name){
+  if(/[^\u0000-\u024F\u2010-\u203A\u20AC]/.test(text)){
+    flash('This reply has non-Latin text or emoji. Opening the print dialog: choose "Save as PDF".');
+    return printHtml('Reply', mdToHtml(text));
+  }
+  await need('jspdf'); const doc = new window.jspdf.jsPDF({unit:'pt', format:'a4'});
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 48; let y = M, code = false;
+  const put = (line, size, font, style)=>{
+    doc.setFont(font, style); doc.setFontSize(size);
+    for(const w of doc.splitTextToSize(line||' ', W-2*M)){ if(y>H-M){ doc.addPage(); y = M } doc.text(w, M, y); y += size*1.35 }
+  };
+  for(const raw of text.split('\n')){
+    if(/^```/.test(raw)){ code = !code; continue }
+    if(code){ put(raw, 9, 'courier', 'normal'); continue }
+    const m = raw.match(/^(#{1,6})\s+(.*)/);
+    if(m) put(plain(m[2]), [22,18,15,13,12,11][m[1].length-1], 'helvetica', 'bold');
+    else put(plain(raw.replace(/^\s*[-*]\s+/,'• ')), 11, 'helvetica', 'normal');
+  }
+  doc.save(name);
+}
+function docxXml(text){
+  const X = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'');
+  const rtl = s => /[\u0590-\u08FF]/.test(s);
+  const run = (t,o={})=>{
+    if(t==='') return '';
+    let p = '';
+    if(o.font) p += '<w:rFonts w:ascii="'+o.font+'" w:hAnsi="'+o.font+'" w:cs="'+o.font+'"/>';
+    if(o.b) p += '<w:b/><w:bCs/>';
+    if(o.sz) p += '<w:sz w:val="'+o.sz+'"/><w:szCs w:val="'+o.sz+'"/>';
+    if(o.rtl) p += '<w:rtl/>';
+    return '<w:r><w:rPr>'+p+'</w:rPr><w:t xml:space="preserve">'+X(t)+'</w:t></w:r>';
+  };
+  const fmtRuns = (line,o={})=>line.replace(/`/g,'').split('**').map((t,i)=>run(t,{...o, b:o.b||i%2===1, rtl:rtl(line)})).join('');
+  const para = (inner,line)=>'<w:p><w:pPr>'+(rtl(line)?'<w:bidi/>':'')+'</w:pPr>'+inner+'</w:p>';
+  const tbl = rows=>{
+    const t = parseTable(rows), w = t[0]?.length||1;
+    const b = ['top','left','bottom','right','insideH','insideV'].map(s=>'<w:'+s+' w:val="single" w:sz="4" w:space="0" w:color="999999"/>').join('');
+    return '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblBorders>'+b+'</w:tblBorders></w:tblPr><w:tblGrid>'+'<w:gridCol w:w="2000"/>'.repeat(w)+'</w:tblGrid>'
+      + t.map((r,ri)=>'<w:tr>'+r.map(c=>'<w:tc><w:p>'+fmtRuns(c,{b:ri===0})+'</w:p></w:tc>').join('')+'</w:tr>').join('')+'</w:tbl><w:p/>';
+  };
+  const L = text.split('\n'); let i = 0, body = '';
+  while(i<L.length){
+    const l = L[i]; let m;
+    if(/^```/.test(l)){ i++; while(i<L.length && !/^```/.test(L[i])){ body += para(run(L[i],{font:'Courier New',sz:18}), ''); i++ } i++; continue }
+    if(/^\s*\|/.test(l)){ const r=[]; while(i<L.length && /^\s*\|/.test(L[i])) r.push(L[i++]); body += tbl(r); continue }
+    if((m = l.match(/^(#{1,6})\s+(.*)/))){ body += para(fmtRuns(m[2],{b:true, sz:[36,30,26,24,22,22][m[1].length-1]}), m[2]); i++; continue }
+    const t = l.replace(/^\s*[-*]\s+/,'• ');
+    body += para(fmtRuns(t), t); i++;
+  }
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+body+'<w:sectPr/></w:body></w:document>';
+}
+async function toDocx(text, name){
+  const Z = await need('jszip'), z = new Z();
+  z.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+  z.file('_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+  z.file('word/document.xml', docxXml(text));
+  dl(await z.generateAsync({type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}), name);
+}
+function tablesFrom(text){
+  const out = []; let cur = [];
+  for(const l of text.replace(/```[\s\S]*?```/g,'').split('\n')){
+    if(/^\s*\|/.test(l)) cur.push(l); else { if(cur.length) out.push(cur); cur = [] }
+  }
+  if(cur.length) out.push(cur);
+  return out.map(parseTable).filter(t=>t.length>1 || (t[0]&&t[0].length>1));
+}
+async function toXlsx(text, name){
+  const X = await need('xlsx'), wb = X.utils.book_new(); let n = 0;
+  for(const t of tablesFrom(text)){
+    const rows = t.map(r=>r.map(c=>/^-?\d+(\.\d+)?$/.test(c) ? Number(c) : c));
+    X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet(rows), 'Table '+(++n));
+  }
+  for(const b of codeBlocks(text)){
+    if(!/^(csv|tsv)$/i.test(b.lang)) continue;
+    const w = X.read(b.code, {type:'string'});
+    X.utils.book_append_sheet(wb, w.Sheets[w.SheetNames[0]], 'CSV '+(++n));
+  }
+  if(!n) throw new Error('no table or CSV block found in this reply');
+  X.writeFile(wb, name);
+}
+async function toZip(text, name){
+  const bl = codeBlocks(text); if(!bl.length) throw new Error('no code blocks in this reply');
+  const Z = await need('jszip'), z = new Z(), used = {};
+  bl.forEach((b,i)=>{
+    let n = (b.name || 'file-'+(i+1)+'.'+(LANG_EXT[b.lang.toLowerCase()]||b.lang||'txt')).replace(/^\/+/,'').replace(/\.\.\//g,''), n2 = n, k = 1;
+    while(used[n2]) n2 = n.replace(/(\.[^./]*)?$/, '-'+(++k)+'$1');
+    used[n2] = 1; z.file(n2, b.code);
+  });
+  dl(await z.generateAsync({type:'blob'}), name);
+}
+async function saveAs(kind, text){
+  const base = 'reply-'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+  try{
+    if(kind==='txt') dl(new Blob([text],{type:'text/plain'}), base+'.txt');
+    else if(kind==='md') dl(new Blob([text],{type:'text/markdown'}), base+'.md');
+    else if(kind==='html') dl(new Blob([docHtml('Reply', mdToHtml(text))],{type:'text/html'}), base+'.html');
+    else if(kind==='pdf') await toPdf(text, base+'.pdf');
+    else if(kind==='print') printHtml('Reply', mdToHtml(text));
+    else if(kind==='docx') await toDocx(text, base+'.docx');
+    else if(kind==='xlsx') await toXlsx(text, base+'.xlsx');
+    else if(kind==='zip') await toZip(text, base+'.zip');
+  }catch(e){ flash('Save failed: '+e.message) }
+}
+function copyText(t, btn){
+  navigator.clipboard.writeText(t).then(()=>{ const o = btn.textContent; btn.textContent = 'Copied'; setTimeout(()=>btn.textContent = o, 1200) }).catch(()=>flash('Copy failed'));
+}
+const FILE_HINT = 'File output: when the user wants a file, document, page, component or code to save or download, put the full content of EACH file in its own fenced code block, with the language and the exact filename on the opening line, for example ```jsx App.jsx or ```html index.html. You choose the format and extension that fits the request: any text-based format works (html, jsx, py, json, csv, svg, md, txt, and so on) and the app turns the block into a download with that exact name. Special cases: .docx and .pdf (write the content as Markdown inside the block) and .xlsx (write CSV or a Markdown table). Other binary formats are not possible, so pick the closest text format. Never say you cannot create files. For normal answers just reply with text.';
+const MIME = {html:'text/html',htm:'text/html',json:'application/json',svg:'image/svg+xml',css:'text/css',js:'text/javascript',csv:'text/csv',md:'text/markdown',xml:'application/xml'};
+async function toXlsxRaw(content, name){
+  const X = await need('xlsx'), wb = X.utils.book_new(), tb = tablesFrom(content);
+  if(tb.length) tb.forEach((t,i)=>X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet(t.map(r=>r.map(c=>/^-?\d+(\.\d+)?$/.test(c)?Number(c):c))), 'Table '+(i+1)));
+  else { const w = X.read(content,{type:'string'}); X.utils.book_append_sheet(wb, w.Sheets[w.SheetNames[0]], 'Sheet1') }
+  X.writeFile(wb, name);
+}
+async function downloadNamed(name, content){
+  const base = name.split('/').pop() || 'file.txt', e = extOf(base);
+  if(e==='pdf') return toPdf(content, base);
+  if(e==='docx') return toDocx(content, base);
+  if(e==='xlsx' || e==='xls') return toXlsxRaw(content, base.replace(/\.xls$/,'.xlsx'));
+  dl(new Blob([content],{type:(MIME[e]||'text/plain')+';charset=utf-8'}), base);
+}
+function addActions(m, text){
+  const row = m.parentNode; row.querySelector('.acts')?.remove();
+  const bl = codeBlocks(text), named = bl.filter(b=>b.name).length;
+  const d = document.createElement('div'); d.className = 'acts'; d._text = text;
+  d.innerHTML = '<button type="button" class="btn" data-act="copyall">Copy</button>'
+    + (named>0 && bl.length>1 ? ' <button type="button" class="btn" data-act="zipall">Download all ('+bl.length+' files, .zip)</button>' : '');
+  row.appendChild(d);
+}
+
+// ---------- wiring ----------
+$('attach').onclick = ()=>$('file').click();
+$('file').onchange = e=>{ attach([...e.target.files]); e.target.value = '' };
+$('chips').addEventListener('click', e=>{
+  const b = e.target.closest('b[data-i]'); if(!b) return;
+  pending.splice(+b.dataset.i, 1); renderChips(); updateStats();
+});
+window.addEventListener('dragover', e=>e.preventDefault());
+window.addEventListener('drop', e=>{ e.preventDefault(); if(e.dataTransfer?.files?.length) attach([...e.dataTransfer.files]) });
+$('input').addEventListener('paste', e=>{
+  const fs = [...(e.clipboardData?.files||[])]; if(fs.length){ e.preventDefault(); attach(fs) }
+});
+$('msgs').addEventListener('click', e=>{
+  const b = e.target.closest('button[data-act]'); if(!b) return;
+  if(b.dataset.act==='copyall') return copyText(b.closest('.acts')._text, b);
+  if(b.dataset.act==='zipall') return toZip(b.closest('.acts')._text, 'files.zip').catch(err=>flash('Download failed: '+err.message));
+  const cb = b.closest('.cb'), code = cb.querySelector('code').textContent, lang = cb.dataset.lang||'';
+  if(b.dataset.act==='copy') copyText(code, b);
+  else downloadNamed(cb.dataset.name || 'code.'+(LANG_EXT[lang.toLowerCase()]||lang||'txt'), code).catch(err=>flash('Download failed: '+err.message));
+});
+$('msgs').addEventListener('change', e=>{
+  if(!e.target.classList.contains('sv') || !e.target.value) return;
+  const kind = e.target.value, acts = e.target.closest('.acts'); e.target.value = '';
+  saveAs(kind, acts._text);
+});
+
+// ===== Cloud sync (Supabase, plain REST) =====
+const SB_DEFAULT_URL = 'https://uwmiacipuisreexmkhqn.supabase.co';
+const SB_DEFAULT_KEY = 'sb_publishable_VumVKDpF88-SiyNlqOZZdg_6lfgMg3k';
+const sbUrl = () => SB_DEFAULT_URL;
+const sbKey = () => SB_DEFAULT_KEY;
+let sbSess = null; try{ sbSess = JSON.parse(store.get('sb_session','null')) }catch{}
+let syncBusy = false, syncTimer = null, hydrating = Promise.resolve();
+const dirty = new Set();
+const msOf = t => new Date(t).getTime();
+const setSync = m => { $('syncState').textContent = m };
+const syncLabel = () => sbSess ? '☁ '+sbSess.email : '☁ not signed in';
+const acctMsg = m => { $('loginMsg').textContent = m };
+const blobToDataUrl = b => new Promise((res,rej)=>{ const f = new FileReader(); f.onload = ()=>res(f.result); f.onerror = rej; f.readAsDataURL(b) });
+
+async function authCall(path, body){
+  const r = await fetch(sbUrl()+'/auth/v1/'+path, {method:'POST', headers:{'content-type':'application/json', apikey:sbKey()}, body:JSON.stringify(body)});
+  const j = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.error_description || j.msg || j.message || j.error || String(r.status));
+  return j;
+}
+function takeSession(j){
+  if(!j.access_token) return false;
+  sbSess = {access_token:j.access_token, refresh_token:j.refresh_token, expires_at:Date.now()+(j.expires_in||3600)*1000, email:j.user?.email || sbSess?.email || '', uid:j.user?.id || sbSess?.uid};
+  store.set('sb_session', JSON.stringify(sbSess)); return true;
+}
+async function getToken(){
+  if(!sbSess) throw new Error('not signed in');
+  if(Date.now() > sbSess.expires_at-60000){
+    try{ takeSession(await authCall('token?grant_type=refresh_token', {refresh_token:sbSess.refresh_token})) }
+    catch{ sbSess = null; store.del('sb_session'); updateAccountUi(); throw new Error('session expired, sign in again') }
+  }
+  return sbSess.access_token;
+}
+async function sbFetch(path, opts={}){
+  const tok = await getToken();
+  const r = await fetch(sbUrl()+path, {...opts, headers:{apikey:sbKey(), Authorization:'Bearer '+tok, ...(opts.headers||{})}});
+  if(!r.ok){ let m = String(r.status); try{ const j = await r.json(); m = j.message || j.error || m }catch{} throw new Error(m) }
+  return r;
+}
+function updateAccountUi(){
+  $('acctStatus').textContent = sbSess ? 'Signed in as '+sbSess.email : 'Not signed in.';
+  $('login').style.display = sbSess ? 'none' : 'flex';
+  if(!sbSess && $('settings').open) $('settings').close();
+  setSync(syncLabel());
+}
+function wipeLocalChats(){
+  chats.forEach(c=>store.del('chat:'+c.id)); chats = []; history = []; curId = ''; CLOUD_KEYS.forEach(k=>mem.delete(k)); settingsLoaded = false;
+  store.set('current_chat',''); saveIndex(); redraw(); renderChatList();
+}
+async function signIn(){
+  const email = $('loginEmail').value.trim(), password = $('loginPass').value;
+  if(!email || !password) return acctMsg('Enter your email and password.');
+  acctMsg('Signing in…'); $('loginBtn').disabled = true;
+  try{
+    const j = await authCall('token?grant_type=password', {email, password});
+    if(!takeSession(j)) return acctMsg('Sign in failed.');
+    $('loginPass').value = '';
+    const prev = store.get('sb_owner','');
+    if(prev && prev!==sbSess.uid) wipeLocalChats(); // another account used this browser before
+    store.set('sb_owner', sbSess.uid);
+    acctMsg(''); updateAccountUi(); hydrateImages(); cloudSync().then(()=>{ if(!store.get('api_key')) $('settings').showModal() });
+  }catch(e){ acctMsg('Sign in failed: '+e.message) }
+  finally{ $('loginBtn').disabled = false }
+}
+function signOut(){
+  sbSess = null; store.del('sb_session'); wipeLocalChats(); applySettingsUi(); acctMsg(''); updateAccountUi();
+}
+
+async function pushChat(id){
+  const c = chats.find(x=>x.id===id); if(!c || !sbSess) return;
+  const raw = store.get('chat:'+id, null); if(raw===null) return;
+  await sbFetch('/rest/v1/chats', {method:'POST', headers:{'content-type':'application/json', Prefer:'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify({id, title:c.title, auto:c.auto!==false, messages:JSON.parse(raw), updated_at:new Date(c.updated).toISOString()})});
+}
+async function pullChat(id){
+  const r = await sbFetch('/rest/v1/chats?id=eq.'+encodeURIComponent(id)+'&select=title,auto,messages,updated_at');
+  const [x] = await r.json(); if(!x) throw new Error('chat not found in the cloud');
+  store.set('chat:'+id, JSON.stringify(x.messages||[]));
+  const c = chats.find(y=>y.id===id);
+  if(c){ c.title = x.title; c.auto = x.auto; c.updated = msOf(x.updated_at); delete c.stale }
+  saveIndex();
+}
+function cloudPush(){
+  if(!sbSess) return;
+  clearTimeout(syncTimer); setSync('☁ saving…');
+  syncTimer = setTimeout(async ()=>{
+    const ids = [...dirty]; dirty.clear();
+    try{ for(const id of ids) await pushChat(id); setSync(syncLabel()) }
+    catch(e){ ids.forEach(i=>dirty.add(i)); setSync('☁ sync error: '+e.message) }
+  }, 1200);
+}
+async function cloudSync(){
+  if(!sbSess || syncBusy) return;
+  syncBusy = true; setSync('☁ syncing…');
+  try{
+    if(!settingsLoaded) await pullSettings();
+    const rows = await (await sbFetch('/rest/v1/chats?select=id,title,auto,updated_at&order=updated_at.desc&limit=1000')).json();
+    const remote = new Map(rows.map(x=>[x.id,x])); let changed = false;
+    for(const x of rows){
+      const c = chats.find(y=>y.id===x.id), ru = msOf(x.updated_at);
+      if(!c){ chats.push({id:x.id, title:x.title, auto:x.auto, updated:ru, stale:true}); changed = true }
+      else if(ru > c.updated+1000){ Object.assign(c, {title:x.title, auto:x.auto, updated:ru, stale:true}); changed = true }
+    }
+    for(const c of chats){
+      const x = remote.get(c.id);
+      if(!c.stale && (!x || c.updated > msOf(x.updated_at)+1000) && store.get('chat:'+c.id, null)!==null) await pushChat(c.id);
+    }
+    if(changed){ saveIndex(); renderChatList() }
+    const cur = chats.find(x=>x.id===curId);
+    if(cur?.stale && !busy){
+      await pullChat(curId);
+      try{ history = JSON.parse(store.get('chat:'+curId,'[]')) }catch{ history = [] }
+      redraw(); hydrateImages();
+    }
+    legacyCleanup();
+    setSync(syncLabel());
+  }catch(e){ setSync('☁ sync error: '+e.message) }
+  finally{ syncBusy = false }
+}
+async function uploadImages(item){
+  if(!sbSess || !item.images?.length) return;
+  const out = [];
+  for(let i=0;i<item.images.length;i++){
+    const blob = await (await fetch(item.images[i])).blob();
+    const ext = {'image/png':'png','image/webp':'webp','image/gif':'gif'}[blob.type] || 'jpg';
+    const path = sbSess.uid+'/'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6)+'-'+i+'.'+ext;
+    await sbFetch('/storage/v1/object/chat-images/'+path, {method:'POST', headers:{'content-type':blob.type||'image/jpeg'}, body:blob});
+    out.push(path);
+  }
+  item.imgs = out; save();
+}
+function hydrateImages(){
+  if(!sbSess) return;
+  hydrating = (async ()=>{
+    for(const h of history){
+      if(!h.imgs?.length || h.images?.length) continue;
+      try{
+        const arr = [];
+        for(const p of h.imgs) arr.push(await blobToDataUrl(await (await sbFetch('/storage/v1/object/authenticated/chat-images/'+p)).blob()));
+        h.images = arr;
+      }catch(e){ flash('Could not load an image: '+e.message) }
+    }
+    updateStats();
+  })();
+}
+async function cloudDelete(id, paths){
+  if(!sbSess) return;
+  try{
+    await sbFetch('/rest/v1/chats?id=eq.'+encodeURIComponent(id), {method:'DELETE'});
+    if(paths.length) await sbFetch('/storage/v1/object/chat-images', {method:'DELETE', headers:{'content-type':'application/json'}, body:JSON.stringify({prefixes:paths})});
+  }catch(e){ flash('Cloud delete failed: '+e.message) }
+}
+async function cloudRename(c){
+  if(!sbSess) return;
+  try{ await sbFetch('/rest/v1/chats?id=eq.'+encodeURIComponent(c.id), {method:'PATCH', headers:{'content-type':'application/json', Prefer:'return=minimal'}, body:JSON.stringify({title:c.title, auto:false})}) }
+  catch(e){ flash('Cloud rename failed: '+e.message) }
+}
+
+// ----- settings (API key, base URL, system prompt, max tokens, model) in the cloud -----
+const cfgNow = () => Object.fromEntries(CLOUD_KEYS.map(k=>[k, mem.get(k) ?? '']));
+function settingsDirty(){
+  if(!sbSess || !settingsLoaded) return;
+  clearTimeout(settingsTimer);
+  settingsTimer = setTimeout(()=>pushSettings().catch(e=>flash('Settings sync failed: '+e.message)), 800);
+}
+async function pushSettings(){
+  await sbFetch('/rest/v1/settings', {method:'POST', headers:{'content-type':'application/json', Prefer:'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify({user_id:sbSess.uid, data:cfgNow(), updated_at:new Date().toISOString()})});
+}
+function applySettingsUi(){
+  $('key').value = store.get('api_key'); $('system').value = store.get('system_prompt');
+  $('maxTokens').value = store.get('max_tokens','4096'); $('baseUrl').value = store.get('base_url','https://cleanapis.com/v1');
+  fillModels(Object.keys(PRICES)); loadModels(); updateStats();
+}
+async function pullSettings(){
+  const rows = await (await sbFetch('/rest/v1/settings?select=data')).json();
+  if(rows[0]?.data){
+    for(const k of CLOUD_KEYS){ const v = rows[0].data[k]; if(v) mem.set(k, String(v)); else mem.delete(k) }
+    applySettingsUi();
+  }else await pushSettings(); // first time: upload what this page already has
+  settingsLoaded = true;
+}
+
+// ===== Multiple saved chats =====
+async function stopBusy(){
+  if(busy){ controller?.abort(); while(busy) await new Promise(r=>setTimeout(r,20)) }
+}
+function openDrawer(on){ $('side').classList.toggle('open', on); $('scrim').classList.toggle('open', on) }
+function renderChatList(){
+  $('chatList').innerHTML = chats.slice().sort((a,b)=>b.updated-a.updated).map(c=>
+    '<div class="ci'+(c.id===curId?' on':'')+'" data-id="'+c.id+'"><span class="t">'+esc(c.title)+'</span><button data-a="ren" title="Rename">✎</button><button data-a="del" title="Delete">🗑</button></div>'
+  ).join('') || '<div class="none">No saved chats yet.</div>';
+}
+function saveIndex(){ return store.set('chat_index', JSON.stringify(chats)) }
+async function newChat(){
+  await stopBusy();
+  if(!history.length && !curId) return openDrawer(false);
+  history = []; curId = ''; store.set('current_chat','');
+  redraw(); renderChatList(); openDrawer(false);
+}
+async function openChat(id){
+  await stopBusy();
+  const c = chats.find(x=>x.id===id);
+  const need = !!c && (c.stale || store.get('chat:'+id, null)===null);
+  if(need && !sbSess){ flash('Sign in to open this chat (it is stored in your account).'); return }
+  if(id===curId && !need) return openDrawer(false);
+  curId = id; store.set('current_chat', id);
+  if(need){
+    setSync('☁ loading chat…');
+    try{ await pullChat(id) }catch(e){ flash('Could not load chat: '+e.message) }
+    setSync(syncLabel());
+  }
+  try{ history = JSON.parse(store.get('chat:'+id,'[]')) }catch{ history = [] }
+  redraw(); renderChatList(); openDrawer(false); hydrateImages();
+}
+async function deleteChat(id){
+  const c = chats.find(x=>x.id===id); if(!c || !confirm('Delete "'+c.title+'"?')) return;
+  await stopBusy();
+  if(sbSess && store.get('chat:'+id, null)===null){ try{ await pullChat(id) }catch{} }
+  let paths = [];
+  try{ paths = JSON.parse(store.get('chat:'+id,'[]')).flatMap(m=>m.imgs||[]) }catch{}
+  chats = chats.filter(x=>x.id!==id); dirty.delete(id); store.del('chat:'+id); saveIndex();
+  cloudDelete(id, paths);
+  if(id===curId){
+    const next = chats.slice().sort((a,b)=>b.updated-a.updated)[0];
+    if(next) return openChat(next.id);
+    history = []; curId = ''; store.set('current_chat',''); redraw();
+  }
+  renderChatList();
+}
+function renameChat(id){
+  const c = chats.find(x=>x.id===id); if(!c) return;
+  const t = prompt('Rename chat', c.title); if(t===null || !t.trim()) return;
+  c.title = t.trim().slice(0,80); c.auto = false; saveIndex(); renderChatList(); cloudRename(c);
+}
+$('menuBtn').onclick = ()=>{ renderChatList(); openDrawer(true) };
+$('scrim').onclick = ()=>openDrawer(false);
+$('sideNew').onclick = newChat;
+$('newChat').onclick = newChat;
+$('chatList').addEventListener('click', e=>{
+  const row = e.target.closest('.ci'); if(!row) return;
+  const a = e.target.closest('button')?.dataset.a;
+  if(a==='del') deleteChat(row.dataset.id);
+  else if(a==='ren') renameChat(row.dataset.id);
+  else openChat(row.dataset.id);
+});
+$('syncState').onclick = ()=>$('settings').showModal();
+$('loginBtn').onclick = signIn;
+['loginEmail','loginPass'].forEach(id=>$(id).addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); signIn() } }));
+$('signOutBtn').onclick = signOut;
+// ----- theme -----
+const curTheme = () => document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+function paintThemeBtns(){ document.querySelectorAll('.themeBtn').forEach(b=>b.textContent = curTheme()==='dark' ? '☀' : '☾') }
+function toggleTheme(){ const n = curTheme()==='dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = n; store.set('theme', n); paintThemeBtns() }
+document.querySelectorAll('.themeBtn').forEach(b=>b.onclick = toggleTheme);
+paintThemeBtns();
+
+async function send(text){
+  if(!sbSess){ updateAccountUi(); return }
+  const key = store.get('api_key');
+  if(!key){ $('settings').showModal(); return }
+  const files = pending.slice(), texts = files.filter(f=>f.kind==='text'), imgs = files.filter(f=>f.kind==='image');
+  if(imgs.length && NOVISION.has($('model').value.trim())){ flash('This model has no image input. Remove the image or pick a model marked Vision.'); return }
+  pending = []; renderChips();
+  let full = texts.map(f=>'[Attached file: '+f.name+']\n~~~\n'+f.text+'\n~~~').join('\n\n');
+  if(imgs.length) full += (full?'\n\n':'')+'[Attached image'+(imgs.length>1?'s':'')+': '+imgs.map(f=>f.name).join(', ')+']';
+  if(text) full += (full?'\n\n':'')+text;
+  busy = true; $('send').disabled = true;
+  const item = {role:'user', content:full, shown:text, files:files.map(f=>f.name), images:imgs.map(f=>f.dataUrl)};
+  history.push(item); addRow('user', text, null, files.map(f=>f.name));
+  uploadImages(item).catch(e=>flash('Image upload failed: '+e.message));
+  const out = addRow('assistant', '…');
+  let acc = '', usage = null;
+  controller = new AbortController();
+  try{
+    await hydrating;
+    const body = {
+      model: $('model').value,
+      max_tokens: parseInt(store.get('max_tokens','4096'),10) || 4096,
+      stream: true,
+      stream_options: {include_usage:true},
+      messages: history.map(h=>h.images&&h.images.length ? {role:h.role, content:[{type:'text',text:h.content}, ...h.images.map(u=>({type:'image_url',image_url:{url:u}}))]} : {role:h.role, content:h.content})
+    };
+    const sys = store.get('system_prompt'); body.messages.unshift({role:'system', content: (sys ? sys+'\n\n' : '')+FILE_HINT});
+    const estIn = body.messages.reduce((a,m)=>a+4+(typeof m.content==='string' ? estTok(m.content) : m.content.reduce((b,c)=>b+(c.type==='text' ? estTok(c.text) : IMG_TOK),0)),0);
+    const doFetch = b => fetch(getBase() + '/chat/completions', {
+      method:'POST', signal: controller.signal,
+      headers:{
+        'content-type':'application/json',
+        'Authorization': 'Bearer ' + key
+      },
+      body: JSON.stringify(b)
+    });
+    let res = await doFetch(body);
+    if(res.status===400){ delete body.stream_options; res = await doFetch(body); }
+    if(!res.ok){
+      let msg = res.status+' '+res.statusText;
+      try{ const j = await res.json(); msg = j.error?.message || msg }catch{}
+      throw new Error(msg);
+    }
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = '';
+    while(true){
+      const {done, value} = await reader.read(); if(done) break;
+      buf += dec.decode(value, {stream:true});
+      const lines = buf.split('\n'); buf = lines.pop();
+      for(const line of lines){
+        if(!line.startsWith('data:')) continue;
+        const data = line.slice(5).trim(); if(!data || data==='[DONE]') continue;
+        let ev; try{ ev = JSON.parse(data) }catch{ continue }
+        if(ev.error){ throw new Error(ev.error.message || 'Stream error') }
+        if(ev.usage) usage = ev.usage;
+        const piece = ev.choices?.[0]?.delta?.content;
+        if(piece){
+          acc += piece; out.innerHTML = render(acc);
+          $('msgs').scrollTop = $('msgs').scrollHeight;
+        }
+      }
+    }
+    const p = PRICES[$('model').value.trim()];
+    const tin = usage?.prompt_tokens ?? estIn, tout = usage?.completion_tokens ?? estTok(acc);
+    const meta = {tin, tout, exact: !!usage, cost: p ? (tin*p[0]+tout*p[1])/MIL : null};
+    history.push({role:'assistant', content: acc || '(empty response)', meta}); setMeta(out, meta); addActions(out, acc || '(empty response)'); save();
+  }catch(e){
+    if(e.name==='AbortError'){ if(acc){ history.push({role:'assistant', content:acc}); save() } }
+    else{
+      history.pop(); // remove failed user turn so history stays valid
+      out.innerHTML = '<span class="err">Error: '+esc(e.message)+'</span>';
+    }
+  }finally{ busy = false; $('send').disabled = false; controller = null; updateStats() }
+}
+
+$('form').addEventListener('submit', e=>{
+  e.preventDefault();
+  const t = $('input').value.trim(); if((!t && !pending.length) || busy) return;
+  $('input').value = ''; $('input').style.height = 'auto';
+  send(t); updateStats();
+});
+$('input').addEventListener('keydown', e=>{
+  if(e.key==='Enter' && !e.shiftKey && !/Mobi|Android/i.test(navigator.userAgent)){ e.preventDefault(); $('form').requestSubmit() }
+});
+$('input').addEventListener('input', e=>{ e.target.style.height='auto'; e.target.style.height=Math.min(e.target.scrollHeight,160)+'px'; updateStats() });
+$('settingsBtn').onclick = ()=>$('settings').showModal();
+// ----- token comparison across models -----
+async function cmpCount(model, text, key){
+  const call = async content => {
+    for(const mt of [1,16]){
+      const r = await fetch(getBase()+'/chat/completions', {method:'POST', headers:{'content-type':'application/json', Authorization:'Bearer '+key},
+        body: JSON.stringify({model, max_tokens:mt, stream:false, messages:[{role:'user', content}]})});
+      if(r.ok){ const j = await r.json(); const n = j.usage?.prompt_tokens; if(typeof n!=='number') throw new Error('no usage'); return n }
+      if(r.status!==400 || mt===16){ let m=r.status+''; try{ m = (await r.json()).error?.message || m }catch{} throw new Error(m) }
+    }
+  };
+  const [full, base] = await Promise.all([call(text), call('a')]);
+  return Math.max(0, full - base + 1);   // subtract per-request overhead
+}
+$('cmpBtn').onclick = ()=>$('cmp').showModal();
+$('cmpClose').onclick = ()=>$('cmp').close();
+let cmpBusy = false;
+$('cmpRun').onclick = async ()=>{
+  if(cmpBusy) return;
+  const key = store.get('api_key'), text = $('cmpText').value;
+  if(!key) return $('cmpMsg').textContent = 'Add your API key in Settings first.';
+  if(!text.trim()) return $('cmpMsg').textContent = 'Enter some text.';
+  const models = Object.keys(PRICES), rows = [], tb = $('cmpTable').querySelector('tbody');
+  cmpBusy = true; $('cmpRun').disabled = true; tb.innerHTML = '';
+  let done = 0, i = 0, errs = 0;
+  const draw = ()=>{
+    const ok = rows.filter(r=>r.n!=null).sort((a,b)=>a.n-b.n), min = ok.length ? Math.max(1,ok[0].n) : 1;
+    const bad = rows.filter(r=>r.n==null);
+    tb.innerHTML = ok.map(r=>'<tr><td>'+esc(r.m)+'</td><td>'+r.n+'</td><td>'+(r.n/min*100).toFixed(0)+'%</td><td>'+money(r.n*PRICES[r.m][0])+'</td></tr>').join('')
+      + bad.map(r=>'<tr><td>'+esc(r.m)+'</td><td colspan="3" style="color:var(--muted)" title="'+esc(r.e)+'">failed: '+esc(r.e.slice(0,40))+'</td></tr>').join('');
+    $('cmpMsg').textContent = done<models.length ? 'Running… '+done+'/'+models.length : 'Done. '+(models.length-errs)+' models counted'+(errs?', '+errs+' failed':'')+'.';
+  };
+  const worker = async ()=>{
+    while(i<models.length){
+      const m = models[i++];
+      try{ rows.push({m, n: await cmpCount(m, text, key)}) }catch(e){ errs++; rows.push({m, n:null, e:String(e.message||e)}) }
+      done++; draw();
+    }
+  };
+  draw();
+  await Promise.all([worker(),worker(),worker(),worker()]);
+  cmpBusy = false; $('cmpRun').disabled = false;
+};
+
+$('closeSettings').onclick = ()=>{
+  store.set('api_key', $('key').value.trim());
+  store.set('base_url', $('baseUrl').value.trim());
+  store.set('system_prompt', $('system').value);
+  store.set('max_tokens', $('maxTokens').value);
+  $('settings').close();
+  loadModels(); updateStats();
+};
+$('clearKey').onclick = ()=>{ store.del('api_key'); $('key').value='' };
+
+async function loadModels(){
+  const key = store.get('api_key'); if(!key) return;
+  try{
+    const r = await fetch(getBase() + '/models', {headers:{Authorization:'Bearer '+key}});
+    if(!r.ok) return;
+    const j = await r.json();
+    const ids = (j.data||[]).map(m=>m.id).filter(Boolean);
+    if(ids.length) fillModels(ids);
+  }catch{}
+}
+function fillModels(ids){
+  const cur = store.get('model','claude-opus-4.8'), list = [...new Set(ids)];
+  if(cur && !list.includes(cur)) list.unshift(cur);
+  $('model').innerHTML = list.map(id=>'<option value="'+esc(id)+'">'+esc(id)+'</option>').join('');
+  $('model').value = cur; updateStats();
+}
+fillModels(Object.keys(PRICES));
+loadModels();
+redraw(); renderChatList();
+updateAccountUi();
+if(sbSess) hydrateImages();
+if(sbSess){ cloudSync().then(()=>{ if(!store.get('api_key')) $('settings').showModal() }) }
+</script>
+</body>
+</html>
